@@ -6,7 +6,7 @@ import time
 from perform_task import perform_task
 from rq import Queue
 from flask import Flask
-from flask import Response , json
+from flask import Response , json , render_template
 
 app = Flask(__name__)
 app.redis = redis.StrictRedis(host = 'localhost' , port = 6379 , db = 0)
@@ -32,17 +32,19 @@ def insert_names():
 def enqueue():
 	job = q.enqueue(perform_task , args = (100 , 200))
 	if job.result is None:
-		return '<h1> Enqueue </h1>'
+		return '<h1> Enqueue task with ID %s </h1>' %(job.id)
 	resp = Response(json.dumps(job.result) , status = 200 , mimetype = 'application/json)')
 	return resp
 	
 @app.route('/api/active')
 def active():
 	jobs = q.jobs
+	queued_job_ids = q.job_ids # Gets a list of job IDs from the queue
 	print "number of jobs %d" %(len(q.jobs))
+	res = []
 	for job in jobs:
-		print job.status
-	return '<h1> Active </h1>'	
+		res.append( (job.id , job.status) )
+	return render_template('active.html' , res = res)
 
 if __name__ == '__main__':
 	app.run(debug = True)
